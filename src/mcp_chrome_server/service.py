@@ -19,23 +19,23 @@ import undetected_chromedriver as uc
 logger = logging.getLogger(__name__)
 
 def get_chrome_profile_path() -> str:
-    """사용자의 Chrome 프로필 경로를 가져옵니다.
+    """Get the user's Chrome profile path.
     
-    환경 변수에서 CHROME_PROFILE_PATH를 찾아 반환합니다.
-    환경 변수가 설정되어 있지 않으면 기본 경로를 반환합니다.
+    Retrieves the Chrome profile path from environment variables.
+    If not set, returns the default path based on the operating system.
     
     Returns:
-        str: Chrome 프로필 경로
+        str: Path to Chrome user profile directory
         
     Raises:
-        Exception: 프로필 경로를 찾을 수 없는 경우
+        Exception: If the profile path cannot be found
     """
-    # 환경 변수에서 프로필 경로 확인
+    # Check environment variable first
     profile_path = os.getenv('CHROME_PROFILE_PATH')
     if profile_path:
         return profile_path
         
-    # 기본 프로필 경로 (OS별)
+    # Default profile paths by OS
     if os.name == 'nt':  # Windows
         profile_path = os.path.join(os.environ['LOCALAPPDATA'], 'Google', 'Chrome', 'User Data')
     elif os.name == 'posix':  # macOS
@@ -49,11 +49,20 @@ def get_chrome_profile_path() -> str:
     return profile_path
 
 class CredentialManager:
-    """보안 자격 증명 관리"""
+    """Secure credential management system"""
     
     @staticmethod
     def save_credentials(site: str, username: str, password: str) -> bool:
-        """자격 증명을 시스템 키체인에 안전하게 저장"""
+        """Securely save credentials to system keychain
+        
+        Args:
+            site: Website domain or service identifier
+            username: User's username or email
+            password: User's password
+            
+        Returns:
+            bool: True if credentials were saved successfully
+        """
         try:
             keyring.set_password(site, username, password)
             return True
@@ -63,7 +72,15 @@ class CredentialManager:
     
     @staticmethod
     def get_credentials(site: str, username: str) -> Optional[str]:
-        """저장된 자격 증명 조회"""
+        """Retrieve stored credentials from system keychain
+        
+        Args:
+            site: Website domain or service identifier
+            username: User's username or email
+            
+        Returns:
+            Optional[str]: Retrieved password or None if not found
+        """
         try:
             return keyring.get_password(site, username)
         except Exception as e:
@@ -71,23 +88,35 @@ class CredentialManager:
             return None
 
 class HumanEmulator:
-    """사람의 행동을 모방하는 도구"""
+    """Tools for emulating human-like behavior"""
     
     @staticmethod
-    def get_random_delay():
-        """실제 사람의 타이핑 패턴을 모방한 지연 시간"""
+    def get_random_delay() -> float:
+        """Generate random delay to simulate human typing patterns
+        
+        Returns:
+            float: Random delay between 0.1 and 0.3 seconds
+        """
         return random.uniform(0.1, 0.3)
     
     @staticmethod
-    def simulate_typing(element, text: str):
-        """사람과 유사한 타이핑 패턴으로 텍스트 입력"""
+    def simulate_typing(element: WebElement, text: str) -> None:
+        """Type text with human-like patterns
+        
+        Args:
+            element: Web element to type into
+            text: Text to type
+            
+        Raises:
+            Exception: If typing fails through both normal and JavaScript methods
+        """
         try:
-            # JavaScript로 값 설정 (기본)
+            # Try normal typing first
             element.clear()
             element.send_keys(text)
         except Exception as e:
             logger.error(f"Failed to type text: {str(e)}")
-            # 실패 시 JavaScript로 직접 값 설정
+            # Fall back to JavaScript if normal typing fails
             try:
                 driver = element.parent
                 driver.execute_script("arguments[0].value = arguments[1];", element, text)
@@ -97,9 +126,14 @@ class HumanEmulator:
 
 
 class WebAuthManager:
-    """웹 인증 관리자"""
+    """Web authentication management system"""
     
-    def __init__(self, driver):
+    def __init__(self, driver: webdriver.Chrome):
+        """Initialize WebAuthManager
+        
+        Args:
+            driver: Selenium WebDriver instance
+        """
         self.driver = driver
         self.wait = WebDriverWait(driver, 10)
         
@@ -109,15 +143,17 @@ class WebAuthManager:
              selectors: Dict[str, str],
              auth_type: str = "form",
              wait_for: Optional[str] = None) -> Dict[str, Any]:
-        """
-        웹사이트 로그인 처리
+        """Handle website login process
         
         Args:
-            url: 로그인 페이지 URL
-            credentials: 로그인 정보 (username, password 등)
-            selectors: 로그인 폼 요소의 선택자들 (username, password, submit 필수)
-            auth_type: 인증 방식 (form, oauth, api 등)
-            wait_for: 로그인 성공 후 기다릴 요소
+            url: Login page URL
+            credentials: Login credentials (username, password)
+            selectors: CSS selectors for login form elements
+            auth_type: Authentication type (form, oauth, api)
+            wait_for: Optional selector to wait for after login
+            
+        Returns:
+            Dict[str, Any]: Login result with success status and message
         """
         try:
             if auth_type == "form":
@@ -134,29 +170,42 @@ class WebAuthManager:
 
     def _handle_form_login(self, url: str, credentials: Dict[str, str], 
                          selectors: Dict[str, str], wait_for: Optional[str]) -> Dict[str, Any]:
-        """폼 기반 로그인 처리"""
-        try:
-            # 페이지 로드
-            self.driver.get(url)
-            time.sleep(2)  # 페이지 로드 대기
+        """Handle form-based login process
+        
+        Implements a human-like login process with appropriate delays and checks
+        for various security measures like CAPTCHA.
+        
+        Args:
+            url: Login page URL
+            credentials: Login credentials
+            selectors: Form element selectors
+            wait_for: Optional element to wait for after login
             
-            # 사용자명 입력 필드 찾기
+        Returns:
+            Dict[str, Any]: Login result with success status and message
+        """
+        try:
+            # Load page
+            self.driver.get(url)
+            time.sleep(2)  # Wait for page load
+            
+            # Find username field
             username_field = self.wait.until(
                 EC.presence_of_element_located((By.CSS_SELECTOR, selectors["username"]))
             )
             
-            # 요소가 보이도록 스크롤
+            # Scroll element into view
             self.driver.execute_script("arguments[0].scrollIntoView(true);", username_field)
-            time.sleep(0.5)  # 스크롤 대기
+            time.sleep(0.5)  # Wait for scroll
             
-            # 사람처럼 타이핑
+            # Type like a human
             username_field.clear()
             HumanEmulator.simulate_typing(username_field, credentials["username"])
             
-            # 잠시 대기
+            # Natural delay
             time.sleep(random.uniform(0.5, 1.0))
             
-            # 비밀번호 입력
+            # Handle password field
             password_field = self.driver.find_element(By.CSS_SELECTOR, selectors["password"])
             self.driver.execute_script("arguments[0].scrollIntoView(true);", password_field)
             time.sleep(0.5)
@@ -164,40 +213,40 @@ class WebAuthManager:
             password_field.clear()
             HumanEmulator.simulate_typing(password_field, credentials["password"])
             
-            # 잠시 대기
+            # Natural delay
             time.sleep(random.uniform(0.8, 1.2))
             
-            # 로그인 버튼 클릭
+            # Click login button
             login_button = self.driver.find_element(By.CSS_SELECTOR, selectors["submit"])
             self.driver.execute_script("arguments[0].scrollIntoView(true);", login_button)
             time.sleep(0.5)
             
-            # JavaScript로 클릭 (더 안정적)
+            # Use JavaScript click for reliability
             self.driver.execute_script("arguments[0].click();", login_button)
             
-            # 로그인 성공/실패 확인
-            time.sleep(2)  # 페이지 반응 대기
+            # Wait for response
+            time.sleep(2)
             
-            # 사이트별 특수 처리
+            # Special handling for specific sites
             if "naver.com" in url:
-                # reCAPTCHA iframe 확인
+                # Check for reCAPTCHA
                 recaptcha_frames = self.driver.find_elements(By.CSS_SELECTOR, "iframe[title*='recaptcha']")
                 if recaptcha_frames:
                     return {"success": False, "message": "Login requires reCAPTCHA verification"}
                 
-                # 일반 CAPTCHA 확인
+                # Check for standard CAPTCHA
                 if self.driver.find_elements(By.CSS_SELECTOR, "#captcha"):
                     return {"success": False, "message": "Login requires CAPTCHA verification"}
                 
-                # 네이버 로그인 실패 감지
+                # Check for various error conditions
                 error_selectors = [
-                    "#err_common",  # 일반적인 에러 메시지
-                    ".login_error",  # 로그인 에러
-                    "#err_capslock",  # Caps Lock 에러
-                    "#err_empty_id",  # 빈 아이디 에러
-                    "#err_empty_pw",  # 빈 비밀번호 에러
-                    ".error_message",  # 기타 에러 메시지
-                    ".error"  # 추가 에러 클래스
+                    "#err_common",      # General error
+                    ".login_error",     # Login error
+                    "#err_capslock",    # Caps Lock error
+                    "#err_empty_id",    # Empty ID error
+                    "#err_empty_pw",    # Empty password error
+                    ".error_message",   # Other error messages
+                    ".error"           # Additional error class
                 ]
                 for selector in error_selectors:
                     elements = self.driver.find_elements(By.CSS_SELECTOR, selector)
@@ -211,12 +260,12 @@ class WebAuthManager:
                             except:
                                 continue
                 
-                # 2단계 인증 페이지 감지
+                # Check for 2-step authentication
                 if self.driver.find_elements(By.CSS_SELECTOR, ".2step_auth"):
                     return {"success": False, "message": "2-step verification required"}
             
-            # 일반적인 로그인 실패 감지
-            # 1. 로그인 폼이 여전히 존재하고 표시되는지 확인
+            # Check for general login failure
+            # 1. Check if login form still exists and is visible
             if self.driver.find_elements(By.CSS_SELECTOR, selectors["username"]) and \
                self.driver.find_elements(By.CSS_SELECTOR, selectors["password"]):
                 try:
@@ -227,12 +276,12 @@ class WebAuthManager:
                 except:
                     pass
             
-            # URL 변경 확인 (로그인 페이지를 벗어났는지)
+            # Check for URL change (to ensure not logged in)
             current_url = self.driver.current_url
             if url == current_url:
                 return {"success": False, "message": "Login failed - URL did not change"}
             
-            # 세션 정보 저장
+            # Save session information
             cookies = self.driver.get_cookies()
             local_storage = self.driver.execute_script("return window.localStorage;")
             session_storage = self.driver.execute_script("return window.sessionStorage;")
@@ -254,13 +303,17 @@ class WebAuthManager:
 
     def _handle_oauth_login(self, url: str, credentials: Dict[str, str],
                          selectors: Dict[str, str], wait_for: Optional[str]) -> Dict[str, Any]:
-        """OAuth 로그인 처리"""
-        # OAuth 구현은 추후 추가
+        """OAuth login process
+        
+        OAuth implementation will be added later
+        """
         return {"success": False, "message": "OAuth login not implemented yet"}
 
     def _handle_api_login(self, url: str, credentials: Dict[str, str]) -> Dict[str, Any]:
-        """API 로그인 처리"""
-        # API 로그인 구현은 추후 추가
+        """API login process
+        
+        API login implementation will be added later
+        """
         return {"success": False, "message": "API login not implemented yet"}
 
 class SeleniumService:
@@ -268,23 +321,23 @@ class SeleniumService:
         self.driver = None
         
     def setup_browser(self) -> None:
-        """Chrome 브라우저 초기화 with undetected-chromedriver"""
+        """Initialize Chrome browser with undetected-chromedriver"""
         if self.driver is not None:
             return
             
         options = uc.ChromeOptions()
         
         try:
-            # 사용자의 크롬 프로필 경로를 가져옴
+            # Get user's Chrome profile path
             chrome_profile = get_chrome_profile_path()
             logger.info(f"Using Chrome profile path: {chrome_profile}")
             options.add_argument(f'--user-data-dir={chrome_profile}')
-            options.add_argument('--profile-directory=Default')  # 기본 프로필 사용
+            options.add_argument('--profile-directory=Default')  # Use default profile
         except Exception as e:
             logger.error(f"Failed to set Chrome profile path: {str(e)}")
             logger.warning("Continuing without user profile...")
         
-        # 자동화 감지 우회를 위한 추가 설정
+        # Additional settings for automation detection bypass
         options.add_argument('--start-maximized')
         options.add_argument('--no-sandbox')
         options.add_argument('--disable-dev-shm-usage')
@@ -294,12 +347,12 @@ class SeleniumService:
         
         self.driver = uc.Chrome(options=options)
         
-        # 자동화 감지 플래그 제거
+        # Remove automation detection flag
         self.driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
         self.driver.implicitly_wait(10)
 
     def _ensure_driver(self) -> None:
-        """드라이버가 초기화되어 있는지 확인"""
+        """Ensure driver is initialized"""
         if self.driver is None:
             self.setup_browser()
 
@@ -498,12 +551,12 @@ class SeleniumService:
 
     def tool_save_credentials(self, site: str, username: str, password: str) -> Dict[str, Any]:
         """
-        자격 증명을 안전하게 저장
+        Securely save credentials
         
         Args:
-            site: 웹사이트 도메인
-            username: 사용자 이름
-            password: 비밀번호
+            site: Website domain
+            username: User's username
+            password: Password
         """
         success = CredentialManager.save_credentials(site, username, password)
         return {
@@ -513,11 +566,11 @@ class SeleniumService:
 
     def tool_get_credentials(self, site: str, username: str) -> Dict[str, Any]:
         """
-        저장된 자격 증명 조회
+        Retrieve stored credentials from system keychain
         
         Args:
-            site: 웹사이트 도메인
-            username: 사용자 이름
+            site: Website domain
+            username: User's username
         """
         password = CredentialManager.get_credentials(site, username)
         return {
@@ -530,42 +583,42 @@ class SeleniumService:
                      selectors: Dict[str, str], auth_type: str = "form",
                      wait_for: Optional[str] = None) -> Dict[str, Any]:
         """
-        웹사이트 로그인 수행
+        Perform website login
 
-        이 도구는 제공된 URL로 이동하여 로그인을 시도합니다. 자동입력방지(CAPTCHA)가 
-        감지되면 사용자가 직접 해결할 때까지 대기합니다.
+        This tool attempts to log in to the provided URL. It waits for automatic
+        input prevention (CAPTCHA) to be detected before allowing the user to manually resolve it.
 
         Args:
-            url (str): 로그인 페이지 URL
-            credentials (Dict[str, str]): 로그인 정보
-                - username: 사용자 아이디
-                - password: 비밀번호
-            selectors (Dict[str, str]): 로그인 폼 요소의 선택자들
-                - username: 아이디 입력 필드 선택자
-                - password: 비밀번호 입력 필드 선택자
-                - submit: 로그인 버튼 선택자
-            auth_type (str, optional): 인증 방식. Defaults to "form"
-                - form: 일반적인 폼 기반 로그인
-                - oauth: OAuth 인증
-                - api: API 기반 인증
-            wait_for (Optional[str], optional): 로그인 성공 후 기다릴 요소의 선택자
+            url (str): Login page URL
+            credentials (Dict[str, str]): Login credentials
+                - username: User ID
+                - password: Password
+            selectors (Dict[str, str]): CSS selectors for login form elements
+                - username: ID input field selector
+                - password: Password input field selector
+                - submit: Login button selector
+            auth_type (str, optional): Authentication type. Defaults to "form"
+                - form: Regular form-based login
+                - oauth: OAuth authentication
+                - api: API-based authentication
+            wait_for (Optional[str], optional): CSS selector for element to wait for after login
 
         Returns:
-            Dict[str, Any]: 로그인 결과
-                - success (bool): 로그인 성공 여부
-                - message (str): 상태 메시지
-                - session_data (Dict): 로그인 성공시 세션 정보
-                    - cookies: 쿠키 정보
-                    - localStorage: 로컬 스토리지 데이터
-                    - sessionStorage: 세션 스토리지 데이터
+            Dict[str, Any]: Login result
+                - success (bool): Login success status
+                - message (str): Status message
+                - session_data (Dict): Login success session information
+                    - cookies: Cookie information
+                    - localStorage: Local storage data
+                    - sessionStorage: Session storage data
 
-        특별한 처리:
-            1. CAPTCHA 감지
-                - reCAPTCHA나 일반 CAPTCHA가 감지되면 사용자가 직접 해결할 때까지 대기
-                - 해결 후 자동으로 로그인 프로세스 계속 진행
-            2. 네이버 로그인
-                - 자동입력방지, 2단계 인증 등 특수한 상황 자동 감지
-                - 에러 메시지 상세 분석 및 반환
+        Special handling:
+            1. CAPTCHA detection
+                - If reCAPTCHA or standard CAPTCHA is detected, wait for user to manually resolve
+                - Automatically continue login process after resolution
+            2. Naver login
+                - Automatic detection of various special situations like automatic input prevention, 2-step authentication
+                - Detailed error message analysis and return
 
         Example:
             >>> result = tool_web_login(
@@ -581,11 +634,11 @@ class SeleniumService:
             ...     }
             ... )
             >>> if not result["success"] and "CAPTCHA" in result["message"]:
-            ...     # CAPTCHA 해결을 위해 사용자 입력 대기
+            ...     # Wait for user input for CAPTCHA resolution
             ...     print("Please solve the CAPTCHA in the browser")
         """
         try:
-            # 네이버 로그인 페이지인 경우 기본 선택자 설정
+            # Set default selectors for Naver login page
             if "naver.com" in url:
                 selectors = {
                     "username": "#id",
@@ -601,7 +654,7 @@ class SeleniumService:
             return {"success": False, "message": str(e)}
 
     def tool_get_current_url(self) -> Dict[str, Any]:
-        """현재 페이지의 URL을 반환합니다."""
+        """Return the current page's URL."""
         try:
             url = self.driver.current_url
             return {"success": True, "url": url}
@@ -609,7 +662,7 @@ class SeleniumService:
             return {"success": False, "message": str(e)}
 
     def tool_get_title(self) -> Dict[str, Any]:
-        """현재 페이지의 제목을 반환합니다."""
+        """Return the current page's title."""
         try:
             title = self.driver.title
             return {"success": True, "title": title}
@@ -617,7 +670,7 @@ class SeleniumService:
             return {"success": False, "message": str(e)}
 
     def tool_get_page_source(self) -> Dict[str, Any]:
-        """현재 페이지의 HTML 소스를 반환합니다."""
+        """Return the current page's HTML source."""
         try:
             source = self.driver.page_source
             return {"success": True, "source": source}
@@ -625,7 +678,7 @@ class SeleniumService:
             return {"success": False, "message": str(e)}
 
     def tool_refresh(self) -> Dict[str, Any]:
-        """현재 페이지를 새로고침합니다."""
+        """Refresh the current page."""
         try:
             self.driver.refresh()
             return {"success": True, "message": "Page refreshed successfully"}
@@ -633,7 +686,7 @@ class SeleniumService:
             return {"success": False, "message": str(e)}
 
     def tool_back(self) -> Dict[str, Any]:
-        """브라우저 히스토리에서 뒤로 이동합니다."""
+        """Navigate back in the browser history."""
         try:
             self.driver.back()
             return {"success": True, "message": "Navigated back successfully"}
@@ -641,7 +694,7 @@ class SeleniumService:
             return {"success": False, "message": str(e)}
 
     def tool_forward(self) -> Dict[str, Any]:
-        """브라우저 히스토리에서 앞으로 이동합니다."""
+        """Navigate forward in the browser history."""
         try:
             self.driver.forward()
             return {"success": True, "message": "Navigated forward successfully"}
@@ -649,7 +702,7 @@ class SeleniumService:
             return {"success": False, "message": str(e)}
 
     def tool_execute_script(self, script: str, *args) -> Dict[str, Any]:
-        """JavaScript 코드를 실행합니다."""
+        """Execute JavaScript code."""
         try:
             result = self.driver.execute_script(script, *args)
             return {"success": True, "result": result}
@@ -657,7 +710,7 @@ class SeleniumService:
             return {"success": False, "message": str(e)}
 
     def tool_get_cookies(self) -> Dict[str, Any]:
-        """현재 페이지의 모든 쿠키를 반환합니다."""
+        """Return all cookies from the current page."""
         try:
             cookies = self.driver.get_cookies()
             return {"success": True, "cookies": cookies}
@@ -665,7 +718,7 @@ class SeleniumService:
             return {"success": False, "message": str(e)}
 
     def tool_add_cookie(self, cookie: Dict[str, Any]) -> Dict[str, Any]:
-        """쿠키를 추가합니다."""
+        """Add a cookie."""
         try:
             self.driver.add_cookie(cookie)
             return {"success": True, "message": "Cookie added successfully"}
@@ -673,7 +726,7 @@ class SeleniumService:
             return {"success": False, "message": str(e)}
 
     def tool_delete_cookie(self, name: str) -> Dict[str, Any]:
-        """특정 이름의 쿠키를 삭제합니다."""
+        """Delete a specific cookie."""
         try:
             self.driver.delete_cookie(name)
             return {"success": True, "message": f"Cookie '{name}' deleted successfully"}
@@ -681,7 +734,7 @@ class SeleniumService:
             return {"success": False, "message": str(e)}
 
     def tool_delete_all_cookies(self) -> Dict[str, Any]:
-        """모든 쿠키를 삭제합니다."""
+        """Delete all cookies."""
         try:
             self.driver.delete_all_cookies()
             return {"success": True, "message": "All cookies deleted successfully"}
@@ -689,7 +742,7 @@ class SeleniumService:
             return {"success": False, "message": str(e)}
 
     def tool_set_window_size(self, width: int, height: int) -> Dict[str, Any]:
-        """브라우저 창 크기를 설정합니다."""
+        """Set the browser window size."""
         try:
             self.driver.set_window_size(width, height)
             return {"success": True, "message": f"Window size set to {width}x{height}"}
@@ -697,7 +750,7 @@ class SeleniumService:
             return {"success": False, "message": str(e)}
 
     def tool_get_window_size(self) -> Dict[str, Any]:
-        """현재 브라우저 창 크기를 반환합니다."""
+        """Return the current browser window size."""
         try:
             size = self.driver.get_window_size()
             return {"success": True, "size": size}
@@ -705,7 +758,7 @@ class SeleniumService:
             return {"success": False, "message": str(e)}
 
     def tool_maximize_window(self) -> Dict[str, Any]:
-        """브라우저 창을 최대화합니다."""
+        """Maximize the browser window."""
         try:
             self.driver.maximize_window()
             return {"success": True, "message": "Window maximized successfully"}
@@ -713,7 +766,7 @@ class SeleniumService:
             return {"success": False, "message": str(e)}
 
     def tool_minimize_window(self) -> Dict[str, Any]:
-        """브라우저 창을 최소화합니다."""
+        """Minimize the browser window."""
         try:
             self.driver.minimize_window()
             return {"success": True, "message": "Window minimized successfully"}
@@ -721,7 +774,7 @@ class SeleniumService:
             return {"success": False, "message": str(e)}
 
     def tool_fullscreen_window(self) -> Dict[str, Any]:
-        """브라우저 창을 전체 화면으로 전환합니다."""
+        """Switch the browser window to full screen."""
         try:
             self.driver.fullscreen_window()
             return {"success": True, "message": "Window set to fullscreen successfully"}
@@ -729,7 +782,7 @@ class SeleniumService:
             return {"success": False, "message": str(e)}
 
     def tool_take_screenshot(self, filename: str = None) -> Dict[str, Any]:
-        """현재 페이지의 스크린샷을 저장합니다."""
+        """Save a screenshot of the current page."""
         try:
             if filename:
                 self.driver.save_screenshot(filename)
@@ -741,7 +794,7 @@ class SeleniumService:
             return {"success": False, "message": str(e)}
 
     def tool_switch_to_frame(self, frame_reference: Union[str, int, WebElement]) -> Dict[str, Any]:
-        """특정 프레임으로 전환합니다."""
+        """Switch to a specific frame."""
         try:
             self.driver.switch_to.frame(frame_reference)
             return {"success": True, "message": "Switched to frame successfully"}
@@ -749,7 +802,7 @@ class SeleniumService:
             return {"success": False, "message": str(e)}
 
     def tool_switch_to_default_content(self) -> Dict[str, Any]:
-        """기본 컨텐츠로 돌아갑니다."""
+        """Switch back to default content."""
         try:
             self.driver.switch_to.default_content()
             return {"success": True, "message": "Switched to default content successfully"}
@@ -757,7 +810,7 @@ class SeleniumService:
             return {"success": False, "message": str(e)}
 
     def tool_switch_to_window(self, window_handle: str) -> Dict[str, Any]:
-        """특정 윈도우로 전환합니다."""
+        """Switch to a specific window."""
         try:
             self.driver.switch_to.window(window_handle)
             return {"success": True, "message": "Switched to window successfully"}
@@ -765,7 +818,7 @@ class SeleniumService:
             return {"success": False, "message": str(e)}
 
     def tool_get_window_handles(self) -> Dict[str, Any]:
-        """모든 윈도우 핸들을 반환합니다."""
+        """Return all window handles."""
         try:
             self._ensure_driver()
             handles = self.driver.window_handles
@@ -775,7 +828,7 @@ class SeleniumService:
 
 
     def tool_get_log(self, log_type: str) -> Dict[str, Any]:
-        """브라우저 로그를 가져옵니다."""
+        """Retrieve browser logs."""
         try:
             logs = self.driver.get_log(log_type)
             return {"success": True, "logs": logs}
@@ -783,7 +836,7 @@ class SeleniumService:
             return {"success": False, "message": str(e)}
 
     def tool_implicitly_wait(self, seconds: int) -> Dict[str, Any]:
-        """암시적 대기 시간을 설정합니다."""
+        """Set implicitly wait time."""
         try:
             self.driver.implicitly_wait(seconds)
             return {"success": True, "message": f"Implicit wait set to {seconds} seconds"}
@@ -791,7 +844,7 @@ class SeleniumService:
             return {"success": False, "message": str(e)}
 
     def tool_set_page_load_timeout(self, seconds: int) -> Dict[str, Any]:
-        """페이지 로드 타임아웃을 설정합니다."""
+        """Set page load timeout."""
         try:
             self.driver.set_page_load_timeout(seconds)
             return {"success": True, "message": f"Page load timeout set to {seconds} seconds"}
@@ -799,7 +852,7 @@ class SeleniumService:
             return {"success": False, "message": str(e)}
 
     def tool_set_script_timeout(self, seconds: int) -> Dict[str, Any]:
-        """스크립트 실행 타임아웃을 설정합니다."""
+        """Set script execution timeout."""
         try:
             self.driver.set_script_timeout(seconds)
             return {"success": True, "message": f"Script timeout set to {seconds} seconds"}
