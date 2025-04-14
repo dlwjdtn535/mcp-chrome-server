@@ -11,7 +11,6 @@ from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.common.exceptions import TimeoutException, WebDriverException
-import undetected_chromedriver as uc
 
 logger = logging.getLogger(__name__)
 
@@ -318,34 +317,36 @@ class SeleniumService:
         self.driver = None
         
     def setup_browser(self) -> None:
-        """Initialize Chrome browser with undetected-chromedriver"""
+        """Initialize Chrome browser"""
         if self.driver is not None:
             return
             
-        options = uc.ChromeOptions()
+        options = webdriver.ChromeOptions()
         
         try:
             # Get user's Chrome profile path
             chrome_profile = get_chrome_profile_path()
             logger.info(f"Using Chrome profile path: {chrome_profile}")
             options.add_argument(f'--user-data-dir={chrome_profile}')
-            options.add_argument('--profile-directory=Default')  # Use default profile
         except Exception as e:
             logger.error(f"Failed to set Chrome profile path: {str(e)}")
             logger.warning("Continuing without user profile...")
         
         # Additional settings for automation detection bypass
-        options.add_argument('--start-maximized')
+        options.add_argument('--headless=new')  # Enable headless mode
         options.add_argument('--no-sandbox')
         options.add_argument('--disable-dev-shm-usage')
+        options.add_argument('--disable-gpu')
         options.add_argument('--disable-extensions')
         options.add_argument('--disable-plugins-discovery')
         options.add_argument('--disable-notifications')
         
-        self.driver = uc.Chrome(options=options)
-        
-        # Remove automation detection flag
-        self.driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+        # Set binary location from environment variable
+        binary_location = os.getenv('CHROME_BINARY_LOCATION')
+        if binary_location:
+            options.binary_location = binary_location
+            
+        self.driver = webdriver.Chrome(options=options)
         self.driver.implicitly_wait(10)
 
     def _ensure_driver(self) -> None:
