@@ -39,6 +39,15 @@ COPY --from=uv --chown=app:app /app/.venv /app/.venv
 # Place executables in the environment at the front of the path
 ENV PATH="/app/.venv/bin:$PATH"
 
+# Install build dependencies for pydantic
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    python3-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Reinstall pydantic with proper compilation
+RUN pip install --no-cache-dir --force-reinstall pydantic
+
 # Create directory for Chrome profile
 RUN mkdir -p /chrome-profile
 
