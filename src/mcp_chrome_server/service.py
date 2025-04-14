@@ -6,9 +6,6 @@ from typing import Optional, Dict, Any, Union
 
 import keyring
 from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support import expected_conditions as EC
@@ -853,6 +850,14 @@ class SeleniumService:
 
     def tool_set_script_timeout(self, seconds: int) -> Dict[str, Any]:
         """Set script execution timeout."""
+        try:
+            self.driver.set_script_timeout(seconds)
+            return {"success": True, "message": f"Script timeout set to {seconds} seconds"}
+        except Exception as e:
+            return {"success": False, "message": str(e)}
+
+    def tool_sample(self, seconds: int) -> Dict[str, Any]:
+        """Set Sample execution timeout."""
         try:
             self.driver.set_script_timeout(seconds)
             return {"success": True, "message": f"Script timeout set to {seconds} seconds"}
