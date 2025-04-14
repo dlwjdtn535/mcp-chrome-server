@@ -3,5 +3,25 @@ name = "mcp-chrome-server"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.9"
-dependencies = []
+requires-python = ">=3.12"
+dependencies = [
+    "mcp[cli]>=1.6.0",
+    "selenium>=4.14.0,<4.15.0",
+    "webdriver-manager>=4.0.1",
+    "keyring>=24.3.0",
+    "setuptools>=69.0.0",
+    "undetected-chromedriver>=3.5.0"
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0"
+]
+
+[project.scripts]
+mcp-chrome-server = "mcp_chrome_server:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
