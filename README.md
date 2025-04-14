@@ -84,31 +84,6 @@ Choose one of the following setup methods based on your environment:
 }
 ```
 
-#### 2. Using Docker
-
-```bash
-# Pull the latest image first
-docker pull dlwjdtn535/mcp-chrome-server:latest
-```
-
-```json
-{
-  "mcpServers": {
-    "chrome-server-docker": {
-      "command": "docker",
-      "args": [
-        "run",
-        "-i",
-        "--rm",
-        "--init",
-        "-e", "CHROME_PROFILE_PATH=/chrome-profile",
-        "dlwjdtn535/mcp-chrome-server:latest"
-      ]
-    }
-  }
-}
-```
-
 ## Configuration
 
 ### Chrome Profile Paths
