@@ -102,7 +102,6 @@ docker pull dlwjdtn535/mcp-chrome-server:latest
         "--rm",
         "--init",
         "-e", "CHROME_PROFILE_PATH=/chrome-profile",
-        "-v", "${CHROME_PROFILE_PATH}:/chrome-profile",
         "dlwjdtn535/mcp-chrome-server:latest"
       ]
     }

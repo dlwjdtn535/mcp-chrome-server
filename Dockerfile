@@ -1,5 +1,5 @@
 # Use a Python image with uv pre-installed
-FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim AS uv
+FROM --platform=$BUILDPLATFORM ghcr.io/astral-sh/uv:python3.12-bookworm-slim AS uv
 
 # Install the project into `/app`
 WORKDIR /app
@@ -25,7 +25,8 @@ ADD . /app
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev --no-editable
 
-FROM python:3.12-slim-bookworm
+# Use multi-platform base image
+FROM --platform=$TARGETPLATFORM python:3.12-slim-bookworm
 
 WORKDIR /app
 
@@ -37,6 +38,9 @@ COPY --from=uv --chown=app:app /app/.venv /app/.venv
 
 # Place executables in the environment at the front of the path
 ENV PATH="/app/.venv/bin:$PATH"
+
+# Create directory for Chrome profile
+RUN mkdir -p /chrome-profile
 
 # when running the container, add --db-path and a bind mount to the host's db file
 ENTRYPOINT ["mcp-chrome-server"]
